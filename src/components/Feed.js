@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api'; // ADD THIS IMPORT
+import CommentSection from './CommentSection';
+import UserLink from './UserLink';
 
 const Feed = () => {
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [openCommentSections, setOpenCommentSections] = useState({});
 
   // Fetch posts from API
   const fetchPosts = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/posts');
-      setPosts(response.data.data || response.data); // Handle both paginated and non-paginated responses
+      // FIXED: Use api instead of axios to include auth token
+      const response = await api.get('/posts');
+      
+      // Handle both response formats
+      setPosts(response.data.data || response.data);
     } catch (error) {
       setError('Failed to load posts');
       console.error('Error fetching posts:', error);
@@ -24,13 +30,27 @@ const Feed = () => {
     fetchPosts();
   }, []);
 
+  // Toggle comment section for a post
+  const toggleComments = (postId) => {
+    setOpenCommentSections(prev => ({
+      ...prev,
+      [postId]: !prev[postId]
+    }));
+  };
+
+  // Refresh posts after a new comment is added
+  const handleCommentAdded = () => {
+    fetchPosts(); // Refresh to update comment counts
+  };
+
   // Create a new post
   const handleCreatePost = async (e) => {
     e.preventDefault();
     if (!newPost.trim()) return;
 
     try {
-      const response = await axios.post('http://localhost:8000/api/posts', {
+      // FIXED: Use api instead of axios
+      const response = await api.post('/posts', {
         content: newPost
       });
 
@@ -44,15 +64,17 @@ const Feed = () => {
   };
 
   // Like a post
-  const handleLikePost = async (postId) => {
-    try {
-      await axios.post(`http://localhost:8000/api/posts/${postId}/like`);
-      // Refresh posts to get updated like status
-      fetchPosts();
-    } catch (error) {
-      console.error('Error liking post:', error);
-    }
-  };
+  // Like a post
+const handleLikePost = async (postId) => {
+  try {
+    // FIXED: Use api instead of axios
+    await api.post(`/posts/${postId}/like`);
+    // Refresh posts to get updated like status
+    fetchPosts();
+  } catch (error) {
+    console.error('Error liking post:', error);
+  }
+};
 
   if (loading) {
     return (
@@ -104,30 +126,48 @@ const Feed = () => {
         ) : (
           posts.map((post) => (
             <div key={post.id} className="bg-white p-6 rounded-lg shadow-md mb-4">
+              {/* Post Header with Clickable User Link */}
               <div className="flex items-center mb-3">
-                <div className="w-10 h-10 bg-gray-300 rounded-full mr-3"></div>
-                <div>
-                  <h4 className="font-semibold">{post.user?.name || 'Unknown User'}</h4>
-                  <p className="text-sm text-gray-500">
-                    {new Date(post.created_at).toLocaleDateString()}
-                  </p>
-                </div>
+                <UserLink user={post.user} />
+                <p className="text-sm text-gray-500 ml-3">
+                  {new Date(post.created_at).toLocaleDateString()}
+                </p>
               </div>
               
-              <p className="mb-4">{post.content}</p>
+              {/* Post Content */}
+              <p className="mb-4 text-gray-800">{post.content}</p>
               
-              <div className="flex space-x-4 text-gray-500">
+              {/* Post Engagement Stats */}
+              <div className="flex justify-between text-sm text-gray-500 mb-3 border-b pb-3">
+                <span>{post.likes_count || 0} likes</span>
+                <span>{post.comments_count || 0} comments</span>
+              </div>
+              
+              {/* Post Action Buttons */}
+              <div className="flex space-x-4 text-gray-500 text-sm">
                 <button 
                   onClick={() => handleLikePost(post.id)}
-                  className="hover:text-blue-600"
+                  className="hover:text-blue-600 flex-1 py-2"
                 >
-                  Like ({post.likes_count || 0})
+                  Like
                 </button>
-                <button className="hover:text-green-600">
-                  Comment ({post.comments_count || 0})
+                <button 
+                  onClick={() => toggleComments(post.id)}
+                  className="hover:text-green-600 flex-1 py-2"
+                >
+                  Comment
                 </button>
-                <button className="hover:text-gray-700">Share</button>
+                <button className="hover:text-gray-700 flex-1 py-2">
+                  Share
+                </button>
               </div>
+
+              {/* Comment Section */}
+              <CommentSection 
+                postId={post.id}
+                isOpen={openCommentSections[post.id] || false}
+                onCommentAdded={handleCommentAdded}
+              />
             </div>
           ))
         )}

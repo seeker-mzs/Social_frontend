@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 const AuthContext = createContext();
 
@@ -13,23 +13,14 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [token, setToken] = useState(localStorage.getItem('auth_token'));
   const [loading, setLoading] = useState(true);
-
-  // Configure axios to use the token for all requests
-  useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } else {
-      delete axios.defaults.headers.common['Authorization'];
-    }
-  }, [token]);
 
   useEffect(() => {
     // Check if we have a token on app start
     if (token) {
       // Verify token is still valid by calling a protected endpoint
-      axios.get('http://localhost:8000/api/user')
+      api.get('/user')
         .then(response => {
           setUser(response.data);
         })
@@ -46,21 +37,21 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   const login = (userData, authToken) => {
-    localStorage.setItem('token', authToken);
+    localStorage.setItem('auth_token', authToken);
+    localStorage.setItem('user', JSON.stringify(userData));
     setToken(authToken);
     setUser(userData);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
   };
 
   const logout = () => {
     // Call logout endpoint to revoke token on server side
-    axios.post('http://localhost:8000/api/logout')
+    api.post('/logout')
       .catch(error => console.error('Logout API call failed', error))
       .finally(() => {
-        localStorage.removeItem('token');
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
         setToken(null);
         setUser(null);
-        delete axios.defaults.headers.common['Authorization'];
       });
   };
 

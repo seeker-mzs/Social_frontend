@@ -12,8 +12,8 @@ const Navbar = () => {
         <div className="space-x-4">
           {user ? (
             <>
-              <span>Welcome, {user.username}</span>
-              <Link to="/profile" className="hover:underline">Profile</Link>
+              <Link to="/profile" className="hover:underline">Welcome, {user.username}</Link>
+              <Link to="/users" className="hover:underline">Discover</Link>
               <button onClick={logout} className="hover:underline">Logout</button>
             </>
           ) : (

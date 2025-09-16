@@ -18,6 +18,8 @@ const ProtectedRoute = ({ children }) => {
   return user ? children : <div className="flex justify-center items-center h-screen">Please log in to view this page.</div>;
 };
 
+
+
 function App() {
   return (
     <AuthProvider>
