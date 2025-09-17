@@ -271,6 +271,20 @@ const Profile = () => {
                 {/* Post Content */}
                 <p className="mb-4 text-gray-800">{post.content}</p>
                 
+                {/* In Profile.js, add this to the post rendering section: */}
+                {post.image_url && (
+                  <div className="mb-4">
+                    <img
+                      src={post.image_url}
+                      alt="Post content"
+                      className="w-full h-auto rounded-lg max-h-96 object-contain border"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+                
                 {/* Post Engagement Statistics */}
                 <div className="flex justify-between text-sm text-gray-500 mb-3 border-b pb-3">
                   <span>{post.likes_count || 0} likes</span>

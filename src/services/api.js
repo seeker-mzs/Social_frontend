@@ -3,12 +3,12 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: 'http://localhost:8000/api',
   withCredentials: true,
-  timeout: 10000, // Added timeout to prevent hanging requests
+  timeout: 30000, // ✅ Increased from 10000 to 30000 (30 seconds)
 });
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
       console.log('✅ API Request with token:', token.substring(0, 20) + '...');
@@ -17,9 +17,19 @@ api.interceptors.request.use(
     }
     
     config.headers.Accept = 'application/json';
-    config.headers['Content-Type'] = 'application/json';
+    
+    // ✅ CRITICAL FIX: Only set Content-Type for JSON, not for FormData
+    if (!(config.data instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
+      console.log('📝 Setting Content-Type: application/json');
+    } else {
+      // For FormData, let browser set Content-Type automatically with boundary
+      delete config.headers['Content-Type'];
+      console.log('🖼️ FormData detected - letting browser set Content-Type');
+    }
     
     console.log('🚀 Making API request to:', config.url);
+    console.log('📦 Request data type:', config.data instanceof FormData ? 'FormData' : 'JSON');
     return config;
   },
   (error) => {
@@ -44,6 +54,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       console.log('🔒 Unauthorized - redirecting to login');
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('authToken'); // ✅ Added this line
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
@@ -53,7 +64,7 @@ api.interceptors.response.use(
     }
     
     if (error.code === 'ECONNABORTED') {
-      console.log('⏰ Request timeout');
+      console.log('⏰ Request timeout - increased to 30 seconds');
     }
     
     if (!error.response) {
